@@ -1,6 +1,6 @@
 import torch
 
-device = torch.device("cpu")
+# device = torch.device("cpu")
 
 def optimal_transformation_batch(S1, S2, weight):
     """
@@ -13,6 +13,7 @@ def optimal_transformation_batch(S1, S2, weight):
     c1 = S1.mean(dim=1, keepdim=True) # [num_envs, 3]
     c2 = S2.mean(dim=1, keepdim=True)
     H = (weight * (S1 - c1)).transpose(1,2) @ (weight * (S2 - c2))
+    device = H.device
     U, _, Vh = torch.linalg.svd(H+1e-8*torch.rand_like(H).to(device))
     V = Vh.mH
     R_ = V @ U.transpose(1,2)
@@ -40,6 +41,7 @@ def force_eq_reward(tip_pose, target_pose, compliance, friction_mu, current_norm
     # Prepare dummy gravity
     # Assume COM is at center of target
     if COM is not None:
+        device = tip_pose.device
         com = torch.tensor(COM).to(device).double()
     if gravity is not None:
         dummy_tip = torch.zeros(tip_pose.shape[0], 1, 3).cpu()

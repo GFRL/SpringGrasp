@@ -6,11 +6,14 @@ import torch
 from utils import robot_configs
 from utils.pb_grasp_visualizer import GraspVisualizer
 from utils.create_arrow import create_direct_arrow
-
+import os
+from copy import deepcopy
+import time
 from spring_grasp_planner.optimizers import FCGPISGraspOptimizer, SpringGraspOptimizer
 from spring_grasp_planner.initial_guesses import WRIST_OFFSET
+from scipy.spatial.transform.rotation import Rotation as R
 
-device = torch.device("cpu")
+# device = torch.device("cpu")
 
 def vis_grasp(tip_pose, target_pose):
     tip_pose = tip_pose.cpu().detach().numpy().squeeze()
@@ -43,7 +46,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("--num_iters", type=int, default=200)
-    parser.add_argument("--exp_name", type=str, required=True)
+    parser.add_argument("--exp_name", type=str, default="test")
     parser.add_argument("--pcd_file", type=str, default=None)
     parser.add_argument("--mode", type=str, default="sp") # fc
     parser.add_argument("--hand", type=str, default="allegro")
@@ -52,7 +55,11 @@ if __name__ == "__main__":
     parser.add_argument("--vis_gpis", action="store_true", default=False)
     parser.add_argument("--fast_exp", action="store_true", default=False)
     parser.add_argument("--weight_config", type=str, default=None)
+    parser.add_argument("--obj_name",type=str, default="core_bottle_1a7ba1f4c892e2da30711cdbdbc73924")
+    parser.add_argument("--Trail_id",type=int,default=0)
+    parser.add_argument("--scale",type=float,default=0.06)
     args = parser.parse_args()
+    device = torch.device(f"cuda:0")
 
     if args.weight_config is not None:
         weight_config = json.load(open(f"weight_config/{args.weight_config}.json"))
@@ -64,6 +71,15 @@ if __name__ == "__main__":
     else:
         pcd = o3d.io.read_point_cloud("data/obj_cropped.ply")
     #center = pcd.get_oriented_bounding_box().get_center()
+    t0=time.time()
+    random_idx=np.random.choice(7,20,replace=True)
+    WRIST_OFFSET=deepcopy(WRIST_OFFSET[random_idx])
+    obj_path=os.path.join("assets/DGNObj",args.obj_name,"mesh","simplified.obj")
+    pcd_obj = o3d.io.read_triangle_mesh(obj_path)
+    pcd_obj.scale(args.scale, center=np.array([0,0,0]))
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(pcd_obj.vertices)
     center = pcd.get_axis_aligned_bounding_box().get_center()
     WRIST_OFFSET[:,0] += center[0]
     WRIST_OFFSET[:,1] += center[1]
@@ -130,7 +146,7 @@ if __name__ == "__main__":
     if args.hand == "leap": # Not supported in the paper.
         robot_urdf = "assets/leap_hand/robot.urdf"
     elif args.hand == "allegro": # Used in the paper
-        robot_urdf = "assets/allegro_hand/allegro_hand_description_left.urdf"
+        robot_urdf = "assets/allegro_hand/allegro_hand_description_right.urdf"
 
     if args.mode == "fc":
         grasp_optimizer = optimizers[args.mode](robot_urdf,
@@ -183,16 +199,16 @@ if __name__ == "__main__":
     #print("init joint angles:",init_joint_angles)
     # Visualize target and tip pose
     
-    pcd.colors = o3d.utility.Vector3dVector(np.array([0.0, 0.0, 1.0] * len(pcd.points)).reshape(-1,3))
-    grasp_vis = GraspVisualizer(robot_urdf, pcd)
+    # pcd.colors = o3d.utility.Vector3dVector(np.array([0.0, 0.0, 1.0] * len(pcd.points)).reshape(-1,3))
+    # grasp_vis = GraspVisualizer(robot_urdf, pcd)
 
     # Visualize grasp in pybullet
         
     # After transformation
-    coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05)
-    floor = o3d.geometry.TriangleMesh.create_box(width=0.5, height=0.5, depth=0.01).translate([-0.25,-0.25,-0.01])
+    # coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05)
+    # floor = o3d.geometry.TriangleMesh.create_box(width=0.5, height=0.5, depth=0.01).translate([-0.25,-0.25,-0.01])
     idx_list = []
-    print("Optimal compliance:", opt_compliance)
+    # print("Optimal compliance:", opt_compliance)
     for i in range(opt_tip_pose.shape[0]):
         if opt_margin[i].min() > 0.0:
             idx_list.append(i)
@@ -200,16 +216,32 @@ if __name__ == "__main__":
             continue
         if args.fast_exp:
             continue
-        tips, targets, arrows = vis_grasp(opt_tip_pose[i], opt_target_pose[i])
-        grasp_vis.visualize_grasp(joint_angles=opt_joint_angles[i].detach().cpu().numpy(), 
-                                    wrist_pose=opt_palm_pose[i].detach().cpu().numpy(), 
-                                    target_pose=opt_target_pose[i].detach().cpu().numpy())
-        o3d.visualization.draw_geometries([pcd, *tips, *targets, *arrows])
-    print("Feasible indices:",idx_list, "Feasible rate:", len(idx_list)/opt_tip_pose.shape[0])
+    #     tips, targets, arrows = vis_grasp(opt_tip_pose[i], opt_target_pose[i])
+    #     grasp_vis.visualize_grasp(joint_angles=opt_joint_angles[i].detach().cpu().numpy(), 
+    #                                 wrist_pose=opt_palm_pose[i].detach().cpu().numpy(), 
+    #                                 target_pose=opt_target_pose[i].detach().cpu().numpy())
+    #     o3d.visualization.draw_geometries([pcd, *tips, *targets, *arrows])
+    # print("Feasible indices:",idx_list, "Feasible rate:", len(idx_list)/opt_tip_pose.shape[0])
     if len(idx_list) > 0:
-        np.save(f"data/contact_{args.exp_name}.npy", opt_tip_pose.cpu().detach().numpy()[idx_list])
-        np.save(f"data/target_{args.exp_name}.npy", opt_target_pose.cpu().detach().numpy()[idx_list])
-        np.save(f"data/wrist_{args.exp_name}.npy", opt_palm_pose.cpu().detach().numpy()[idx_list])
-        np.save(f"data/compliance_{args.exp_name}.npy", opt_compliance.cpu().detach().numpy()[idx_list])
-        if args.mode == "prob":
-            np.save(f"data/joint_angle_{args.exp_name}.npy", opt_joint_angles.cpu().detach().numpy()[idx_list])
+        save_dir = os.path.join("results",args.obj_name,f"scale{int(args.scale*100):03d}")
+        obj_path = os.path.join("assets/DGNObj",args.obj_name)
+        os.makedirs(save_dir, exist_ok=True)
+        for i in idx_list:
+            save_path = os.path.join(save_dir, f"{i}.npy")
+            palm_pose=opt_palm_pose[i].detach().cpu().numpy()
+            joint_angles=opt_joint_angles[i].detach().cpu().numpy()
+            palm_quat=R.from_euler('XYZ',palm_pose[3:]).as_quat()#xyzw
+            grasp_qpos=np.concatenate([palm_pose[:3],palm_quat[-1:],palm_quat[:3],joint_angles])
+            data_dict={
+                "obj_path":obj_path,
+                "obj_scale":args.scale,
+                "obj_pose":np.array([0,0,0,1.0,0,0,0]),
+                "grasp_qpos":grasp_qpos,
+            }
+            np.save(save_path,data_dict,allow_pickle=True)
+        # np.save(f"data/contact_{args.exp_name}.npy", opt_tip_pose.cpu().detach().numpy()[idx_list])
+        # np.save(f"data/target_{args.exp_name}.npy", opt_target_pose.cpu().detach().numpy()[idx_list])
+        # np.save(f"data/wrist_{args.exp_name}.npy", opt_palm_pose.cpu().detach().numpy()[idx_list])
+        # np.save(f"data/compliance_{args.exp_name}.npy", opt_compliance.cpu().detach().numpy()[idx_list])
+        # if args.mode == "prob":
+        #     np.save(f"data/joint_angle_{args.exp_name}.npy", opt_joint_angles.cpu().detach().numpy()[idx_list])

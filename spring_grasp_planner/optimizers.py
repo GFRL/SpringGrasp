@@ -9,7 +9,7 @@ from utils.math_utils import minimum_wrench_reward, euler_angles_to_matrix
 from .initial_guesses import *
 from .metric import *
 
-device = torch.device("cpu")
+device = torch.device("cuda:0")
 
 z_margin = 0.3
 FINGERTIP_LB = [-0.2, -0.2,   0.015,   -0.2, -0.2,      0.015,  -0.2, -0.2,      0.015, -0.2, -0.2, 0.015]
@@ -27,7 +27,7 @@ class KinGraspOptimizer:
                  gravity=True,
                  uncertainty=0.0):
         self.ref_q = torch.tensor(ref_q).cpu()
-        self.robot_model = DifferentiableRobotModel(robot_urdf, device="cpu:0")
+        self.robot_model = DifferentiableRobotModel(robot_urdf, device=device)
         self.num_iters = num_iters
         self.ee_link_names = ee_link_names
         self.ee_link_offsets = ee_link_offsets
@@ -623,7 +623,9 @@ class SpringGraspOptimizer:
                  mass = 0.1, com = [0.0, 0.0, 0.0], gravity=True,
                  optimize_palm = False,
                  num_samples = 10,
-                 weight_config = None):
+                 weight_config = None,
+                 device="cuda:0"):
+        self.device = device
         self.ref_q = torch.tensor(ref_q).to(device)
         self.robot_model = DifferentiableRobotModel(robot_urdf, device=device)
         self.num_iters = num_iters
@@ -665,16 +667,16 @@ class SpringGraspOptimizer:
             self.w_reg = weight_config["w_reg"]
             self.w_force = weight_config["w_force"]
         # Print out the weight configuration
-        print("========Weight Configuration:========")
-        print("w_sp:", self.w_sp)
-        print("w_dist:", self.w_dist)
-        print("w_uncer:", self.w_uncer)
-        print("w_gain:", self.w_gain)
-        print("w_tar:", self.w_tar)
-        print("w_col:", self.w_col)
-        print("w_reg:", self.w_reg)
-        print("w_force:", self.w_force)
-        print("=====================================")
+        # print("========Weight Configuration:========")
+        # print("w_sp:", self.w_sp)
+        # print("w_dist:", self.w_dist)
+        # print("w_uncer:", self.w_uncer)
+        # print("w_gain:", self.w_gain)
+        # print("w_tar:", self.w_tar)
+        # print("w_col:", self.w_col)
+        # print("w_reg:", self.w_reg)
+        # print("w_force:", self.w_force)
+        # print("=====================================")
 
     def forward_kinematics(self, joint_angles, palm_poses=None, link_names=None):
         """
@@ -857,6 +859,7 @@ class SpringGraspOptimizer:
         opt_joint_angle = init_joint_angles.clone()
         opt_compliance = compliance.clone()
         opt_target_pose = target_pose.clone()
+        device = self.device
         opt_value = torch.inf * torch.ones(num_envs).double().to(device)
         opt_margin = torch.zeros(num_envs, 4).double().to(device)
         opt_palm_poses = self.palm_offset.clone()
@@ -873,10 +876,10 @@ class SpringGraspOptimizer:
                                                       gpis=gpis, num_envs=num_envs))
             else:
                 loss = self.closure(joint_angles, compliance, target_pose, palm_poses, palm_oris, friction_mu, gpis, num_envs)
-            if verbose:
-                print(f"Step {s} Loss:",float(self.total_loss.mean()))
-            if torch.isnan(self.total_loss.sum()):
-                print("NaN detected:", self.pregrasp_tip_pose, self.total_margin)
+            # if verbose:
+            #     print(f"Step {s} Loss:",float(self.total_loss.mean()))
+            # if torch.isnan(self.total_loss.sum()):
+            #     print("NaN detected:", self.pregrasp_tip_pose, self.total_margin)
             with torch.no_grad():
                 update_flag = self.total_loss < opt_value
                 if update_flag.sum() and s>20:
@@ -892,7 +895,7 @@ class SpringGraspOptimizer:
                 self.optim.step()
             with torch.no_grad():
                 compliance.clamp_(min=40.0) # prevent negative compliance
-        print("Optimization time:", time.time() - start_ts)
-        print("Margin:",opt_margin)
+        # print("Optimization time:", time.time() - start_ts)
+        # print("Margin:",opt_margin)
         return opt_joint_angle, opt_compliance, opt_target_pose, opt_palm_poses, opt_margin, opt_R, opt_t
             
