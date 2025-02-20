@@ -10,7 +10,7 @@ def call_cmd(obj_name,id,gpu_id):
         print("Done!",id)
     return ret
 
-def main(gpu_id,obj_list):
+def main(gpu_id,obj_name_list):
     save_path="results"
     real_obj_name_list=[]
     for obj_name in obj_name_list:
@@ -25,22 +25,22 @@ def main(gpu_id,obj_list):
     total_num=len(obj_name_list)
     test_num=total_num
     for i in range(test_num):
-        call_cmd(obj_name_list[i:i+1],i,gpu_id)
+        call_cmd(obj_name_list[i],i,gpu_id)
 
 
 if __name__ == "__main__":
-    obj_list_path="../assets/DGNObj_splits/icra_test.json"
+    obj_list_path="assets/object/DGN_obj/valid_split/bodex_all.json"
     with open(obj_list_path,"r") as f:
         obj_list=json.load(f)
     
-    gpu_id_num=8*5 #A GPU can serve 5 processes
+    gpu_id_num=8*3 #A GPU can serve 5 processes
     obj_list_list=[[] for i in range(gpu_id_num)]
     for i in range(len(obj_list)):
         obj_list_list[i%gpu_id_num].append(obj_list[i])
-    gpu_id_list=[i//5 for i in range(gpu_id_num)]
+    gpu_id_list=[i//3 for i in range(gpu_id_num)]
     
     pool = mp.Pool(processes=gpu_id_num)
-    pool.map(main,zip(gpu_id_list,obj_list_list))
+    Res=[pool.apply_async(main, args=(gpu_id_list[i],obj_list_list[i])) for i in range(gpu_id_num)]
     pool.close()
     pool.join()
     

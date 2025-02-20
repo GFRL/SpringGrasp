@@ -10,8 +10,7 @@ Follow the instructions in the README_official.md file to install the required p
 ## Generate the dataset
 
 1. Link the dataset to the assets folder
-ln -s ${YOUR_DATA_PATH} assets/DGNObj
-ln -s ${YOUR_SPLIT_PATH} assets/DGNObj_split
+ln -s ${YOUR_PATH}/MeshProcess/assets/object assets/object
 
 2. Generate the dataset
 ```

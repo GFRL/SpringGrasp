@@ -74,7 +74,7 @@ if __name__ == "__main__":
     t0=time.time()
     random_idx=np.random.choice(7,20,replace=True)
     WRIST_OFFSET=deepcopy(WRIST_OFFSET[random_idx])
-    obj_path=os.path.join("assets/DGNObj",args.obj_name,"mesh","simplified.obj")
+    obj_path=os.path.join("assets/object/DGN_obj/processed_data",args.obj_name,"mesh","simplified.obj")
     pcd_obj = o3d.io.read_triangle_mesh(obj_path)
     pcd_obj.scale(args.scale, center=np.array([0,0,0]))
 
@@ -162,8 +162,8 @@ if __name__ == "__main__":
                                                 palm_offset=WRIST_OFFSET,
                                                 uncertainty=20.0,
                                                 # Useless for now
-                                                mass=args.mass, 
-                                                com=[args.com_x,args.com_y,args.com_z],
+                                                # mass=args.mass, 
+                                                # com=[args.com_x,args.com_y,args.com_z],
                                                 gravity=False)
     elif args.mode == "sp":
         grasp_optimizer = optimizers[args.mode](robot_urdf,
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     # print("Feasible indices:",idx_list, "Feasible rate:", len(idx_list)/opt_tip_pose.shape[0])
     if len(idx_list) > 0:
         save_dir = os.path.join("results",args.obj_name,f"scale{int(args.scale*100):03d}")
-        obj_path = os.path.join("assets/DGNObj",args.obj_name)
+        obj_path = os.path.join("assets/object/DGN_obj/processed_data",args.obj_name)
         os.makedirs(save_dir, exist_ok=True)
         for i in idx_list:
             save_path = os.path.join(save_dir, f"{i}.npy")

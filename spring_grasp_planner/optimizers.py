@@ -46,7 +46,7 @@ class KinGraspOptimizer:
                                                            offsets=self.ee_link_offsets, recursive=True)[0].view(-1,3) + self.palm_offset
         return tip_poses.view(-1,3)
 
-    def optimize(self, joint_angles, target_pose, compliance, friction_mu, object_mesh, verbose=True):
+    def optimize(self, joint_angles, target_pose, compliance, friction_mu, object_mesh, verbose=False):
         """
         NOTE: scale matters in running optimization, need to normalize the scale
         Params:
@@ -135,7 +135,7 @@ class SDFGraspOptimizer:
         self.com = com
         self.gravity = gravity
 
-    def optimize(self, tip_pose, target_pose, compliance, friction_mu, object_mesh, verbose=True):
+    def optimize(self, tip_pose, target_pose, compliance, friction_mu, object_mesh, verbose=False):
         """
         NOTE: scale matters in running optimization, need to normalize the scale
         TODO: Add a penalty term to encourage target pose stay inside the object.
@@ -229,7 +229,7 @@ class GPISGraspOptimizer:
         self.gravity = gravity
         self.uncertainty = uncertainty
 
-    def optimize(self, tip_pose, target_pose, compliance, friction_mu, gpis, verbose=True):
+    def optimize(self, tip_pose, target_pose, compliance, friction_mu, gpis, verbose=False):
         """
         NOTE: scale matters in running optimization, need to normalize the scale
         TODO: Add a penalty term to encourage target pose stay inside the object.
@@ -334,7 +334,7 @@ class KinGPISGraspOptimizer:
                                                                 offsets=self.ee_link_offsets, recursive=True)[0].view(-1,3) + self.palm_offset
         return tip_poses.view(-1,3)
     
-    def optimize(self, joint_angles, target_pose, compliance, friction_mu, gpis, verbose=True):
+    def optimize(self, joint_angles, target_pose, compliance, friction_mu, gpis, verbose=False):
         """
         NOTE: scale matters in running optimization, need to normalize the scale
         Params:
@@ -496,7 +496,7 @@ class FCGPISGraspOptimizer:
             cost += palm_z_cost
         return cost
 
-    def optimize(self, init_joint_angles, target_pose, compliance, friction_mu, gpis, verbose=True):
+    def optimize(self, init_joint_angles, target_pose, compliance, friction_mu, gpis, verbose=False):
         """
         NOTE: scale matters in running optimization, need to normalize the scale
         Params:
@@ -631,7 +631,7 @@ class SpringGraspOptimizer:
         self.num_iters = num_iters
         self.ee_link_names = ee_link_names
         self.ee_link_offsets = ee_link_offsets
-        print("Wrist offset:", palm_offset)
+        # print("Wrist offset:", palm_offset)
         self.palm_offset = torch.from_numpy(palm_offset).double().to(device)
         self.optimize_target = optimize_target
         self.optimize_palm = optimize_palm
@@ -830,7 +830,7 @@ class SpringGraspOptimizer:
         loss.backward()
         return loss
 
-    def optimize(self, init_joint_angles, target_pose, compliance, friction_mu, gpis, verbose=True):
+    def optimize(self, init_joint_angles, target_pose, compliance, friction_mu, gpis, verbose=False):
         """
         NOTE: scale matters in running optimization, need to normalize the scale
         Params:
