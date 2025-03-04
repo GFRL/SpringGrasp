@@ -7,12 +7,12 @@
 ## Environment
 Follow the instructions in the README_official.md file to install the required packages.
 
-## Generate the dataset
+## Generate the grasps
 
 1. Link the dataset to the assets folder
 ln -s ${YOUR_PATH}/MeshProcess/assets/object assets/object
 
-2. Generate the dataset
+2. Generate the grasps
 ```
 python optimize_pregrasp.py # generate grasps for single object
 python multi_plan.py        # generate grasps for multiple objects
